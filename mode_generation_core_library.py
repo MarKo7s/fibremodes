@@ -97,6 +97,19 @@ def graded_index_fiber_coefs(xx):
         
     return mn 
 
+def LGFarFieldGouyPhase(mode_index):
+    p = mode_index[0,:] # Controls Laguerre polynomial degree --> number of zeros -- radial
+    l = mode_index[1,:] # Modify phase -- azimutal
+     
+    N = ( l + (2*p) ) * np.pi/2
+    PSI = np.exp(-1j*N) #Gouy phase positive or negative ???
+    
+    return(PSI)
+
+def applyphase(Ein, phase):
+    #Ein --> M,N,N ; phase --> M
+    return(Ein * phase[:,None,None])
+
 @njit(parallel=True)
 def LGmodes_CPU_parallel(w0,X,Y,mode_index,LG):
     #Compute just one part of the piramid --> complex conjugate must be done later
@@ -229,7 +242,7 @@ def ComputeAllLGmodes_list_parallel ( LGmodes, indexes):
     return(WholeModesSet)
 
 @njit(parallel=True)
-def ComputeAllLGmodes_array_parallel ( LGmodes, indexes):
+def ComputeAllLGmodes_array_parallel ( LGmodes, indexes  ):
     """
     Computes the comlex conjugate of the LGmodes if it is needed.
 
@@ -292,6 +305,75 @@ def ComputeAllLGmodes_array ( LGmodes, indexes):
             WholeModesSet[count,...] = (LGmodes[idx,...])
             count += 1
             WholeModesSet[count,...] = (LGmodesConjugate[idx,...])
+            count += 1
+
+    #Done for Loop  
+    return(WholeModesSet)
+
+@njit(parallel=True)
+def ComputeAllLGmodesFarField_array_parallel ( LGmodes, indexes, Gouy ):
+    """
+    Computes the comlex conjugate of the LGmodes if it is needed.
+
+    - LGmodes matrix (Modes,X,Y).
+    - Index of the half piramid, from LGindexes(modeGroup)function.
+    - return an arry with all the modes
+    """
+
+    LGmodesConjugate = np.conjugate(LGmodes) #conjugate all the input modes
+    
+    #LGmn modes --> Unique modes n = 0
+    n = indexes[1,:]
+    l = len(n)
+    uniqueM = len(np.where(n==0)[0])
+    num_modes = (l - uniqueM)*2 + uniqueM
+    
+    WholeModesSet = np.zeros((num_modes,LGmodes.shape[1],LGmodes.shape[2]),np.complex64)
+    count = 0;
+    for idx,n_idx in enumerate(n):
+        if (n_idx == 0):
+            #Independent mode
+            WholeModesSet[count,...] = (LGmodes[idx,...]) * Gouy[idx]
+            count += 1
+        else:
+            #Pair of modes
+            WholeModesSet[count,...] = (LGmodes[idx,...]) * Gouy[idx]
+            count += 1
+            WholeModesSet[count,...] = (LGmodesConjugate[idx,...]) * Gouy[idx]
+            count += 1
+
+    #Done for Loop  
+    return(WholeModesSet)
+
+def ComputeAllLGmodesFarField_array ( LGmodes, indexes, Gouy):
+    """
+    Computes the comlex conjugate of the LGmodes if it is needed.
+
+    - LGmodes matrix (Modes,X,Y).
+    - Index of the half piramid, from LGindexes(modeGroup)function.
+    - return an arry with all the modes
+    """
+
+    LGmodesConjugate = np.conjugate(LGmodes) #conjugate all the input modes
+    
+    #LGmn modes --> Unique modes n = 0
+    n = indexes[1,:]
+    l = len(n)
+    uniqueM = len(np.where(n==0)[0])
+    num_modes = (l - uniqueM)*2 + uniqueM
+    
+    WholeModesSet = np.zeros((num_modes,LGmodes.shape[1],LGmodes.shape[2]),np.complex64)
+    count = 0;
+    for idx,n_idx in enumerate(n):
+        if (n_idx == 0):
+            #Independent mode
+            WholeModesSet[count,...] = (LGmodes[idx,...]) * Gouy[idx]
+            count += 1
+        else:
+            #Pair of modes
+            WholeModesSet[count,...] = (LGmodes[idx,...]) * Gouy[idx]
+            count += 1
+            WholeModesSet[count,...] = (LGmodesConjugate[idx,...]) * Gouy[idx]
             count += 1
 
     #Done for Loop  
@@ -498,6 +580,12 @@ def computeWholeSetofModes(modes_array,indexes, multicore = True):
     else:
         return(ComputeAllLGmodes_array ( modes_array, indexes))
         
+def computeWholeSetofModesFarField(modes_array,indexes, Gouy, multicore = True):
+    
+    if multicore == True:
+        return( ComputeAllLGmodesFarField_array_parallel(modes_array, indexes, Gouy) )
+    else:
+        return(ComputeAllLGmodesFarField_array( modes_array, indexes, Gouy))
 
 
 if __name__ == "__main__":
