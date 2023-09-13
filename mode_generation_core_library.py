@@ -10,8 +10,9 @@ Set of static functions to compute LG (maybe one day also HG) modes
 import numpy as np
 from pylab import *
 import numexpr as ne
-import scipy.special as sp
 import scipy
+import scipy.special as sp
+#simport numba_special
 import time
 
 
@@ -165,10 +166,10 @@ def LGmodes_GPU(w0, X, Y, mode_index, LG, modeType = 'numpy'):
     l_gpu =  cp.asarray(l) # Modify phase
     
     #Check what type of the input LG polynomials ---> Send them to GPU if there were not
-    if type(LG) == cp.core.core.ndarray:
-        LG_gpu = LG
-    elif type(LG) == np.ndarray:
+    if type(LG) == np.ndarray:
         LG_gpu = cp.asarray(LG).astype(cp.complex64)
+    else:
+        LG_gpu = LG
         
     # Emn_gpu = cp.zeros( (p.shape[0],X.shape[0],X.shape[0]) , cp.complex64)
     # print(Emn_gpu.dtype)
@@ -309,6 +310,29 @@ def ComputeAllLGmodes_array ( LGmodes, indexes):
 
     #Done for Loop  
     return(WholeModesSet)
+
+def ComputeAllLGmodes_list ( LGmodes, indexes):
+    """
+    Computes the comlex conjugate of the LGmodes if it is needed.
+    
+    - LGmodes matrix (Modes,X,Y).
+    - Index of the half piramid, from LGindexes(modeGroup)function.
+    """
+    WholeModesSet = []
+    LGmodesConjugate = conjugate(LGmodes)
+    #LGmn modes --> Unique modes n = 0
+    n = indexes[1,:]
+    for count,n_idx in enumerate(n):
+        if (n_idx == 0):
+            #Independent mode
+            WholeModesSet.append(LGmodes[count,...])
+        else:
+            #Pair of modes
+            WholeModesSet.append(LGmodes[count,...])
+            WholeModesSet.append(LGmodesConjugate[count,...])
+            
+    #Done for Loop        
+    return((WholeModesSet))
 
 @njit(parallel=True)
 def ComputeAllLGmodesFarField_array_parallel ( LGmodes, indexes, Gouy ):
@@ -495,6 +519,7 @@ def eval_genlaguerreGPU(p,l,x) :
             
             del temp
             cp._default_memory_pool.free_all_blocks()
+        print('Done')
 
 
     
