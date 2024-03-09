@@ -3,9 +3,9 @@
 ## Scalar mode solver
 
 
-## Analytical solution for GI fibres:
+## Analytical solution for GI fibres
 
 
-### GI omodes
+### GI modes
 
 ### HG modes
