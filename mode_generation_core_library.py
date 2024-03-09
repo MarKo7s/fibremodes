@@ -2,7 +2,7 @@
 """
 Created on Mon Dec 14 10:26:39 2020
 
-Set of static functions to compute LG (maybe one day also HG) modes
+Set of static functions to compute LG modes - HG mode are not included
 
 @author: Marcos
 """
