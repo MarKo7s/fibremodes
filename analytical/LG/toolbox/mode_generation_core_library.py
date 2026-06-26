@@ -482,30 +482,38 @@ def eval_genlaguerreGPU(p,l,x) :
     O[O == np.inf] = 0
     
     O_gpu = cp.asarray(O).astype(MODES_TYPE_FLOAT64)
+    K, H, W = Xmatrix.shape
+    X_flat = Xmatrix.reshape(K, -1)
     
     #Mem checking
+    cp._default_memory_pool.free_all_blocks() #Clean first
     meminfo = cp.cuda.Device(0).mem_info #Tuple (free,total)
-    temp_nbytes = x.shape[0]**2 * (maxK+1) * N * 64 / 8 # dim x dim x DIM x DiM (4 dim array) - float64 beeing use / bytes
-    LG_test_nbytes = x.shape[0]**2 * N * 64 / 8
+    #When working with 4D arrays, the calculation is different
+    #temp_nbytes = H * W * (maxK+1) * N * 8 # dim x dim x DIM x DiM (4 dim array) - float64 beeing use / bytes
+    temp_nbytes = H * W * N * 8 # Using matmul reduce the dimension
+    LG_test_nbytes = x.shape[0]**2 * N * 8
     memfree = meminfo[0]
+    _memBuffer = 0.1 # 10% of the free memory
     memNeed = temp_nbytes + LG_test_nbytes
-    
+    memNeed = memNeed * (1 + _memBuffer)
+
     print('Mem. avaliable ', memfree/1024**3, ' mem. needed ', memNeed/1024**3, ' in Gb')
     
     if(memfree > memNeed):
-        temp = O_gpu[:,:,None,None] * Xmatrix[:,None,...]
-        #print(temp.nbytes/1024**3)
-        LG_test = cp.sum(temp,axis = 0)
-        del temp
+        # temp = O_gpu[:,:,None,None] * Xmatrix[:,None,...]
+        # LG_test = cp.sum(temp,axis = 0)
+        #del temp
+        LG_test = (O_gpu.T @ X_flat).reshape(N, H, W)
         cp._default_memory_pool.free_all_blocks()
+
     else:
         print('Performing it in blocks ...')
         #Do it in chuncks
-        LG_test = cp.zeros((N,x.shape[0],x.shape[1]), MODES_TYPE_FLOAT64)
-        # No smart : do it in # chuncks --> 
-        chuncks = 4 # Hardcoded to 2 since I am not going to go that high in modegroups
+        LG_test = cp.zeros((N,x.shape[0],x.shape[1]), MODES_TYPE_FLOAT64) #Preallocate the ouput
+        chuncks = memNeed // temp_nbytes
         ch = N//chuncks
         rr = N%ch
+
         for i in range(chuncks):
             lowLim = i*ch
             
@@ -514,12 +522,16 @@ def eval_genlaguerreGPU(p,l,x) :
             else:
                 highLim = ch*(i+1)
             
-            temp = O_gpu[: , lowLim : highLim , None , None] * Xmatrix[:,None,...]
-            LG_test[lowLim : highLim , ...] = cp.sum(temp, axis = 0)
+            # This could be matmul
+            # temp = O_gpu[: , lowLim : highLim , None , None] * Xmatrix[:, None, ...]
+            # LG_test[lowLim : highLim , ...] = cp.sum(temp, axis = 0)
+            #del temp
+
+            LG_test[lowLim:highLim] = (O_gpu[:, lowLim:highLim].T @ X_flat).reshape(highLim - lowLim, H, W)
             
             #print('Indexing from ', lowLim, ' to ', highLim , ' out ', N)
             
-            del temp
+            #del temp
             cp._default_memory_pool.free_all_blocks()
         print('Done')
 
