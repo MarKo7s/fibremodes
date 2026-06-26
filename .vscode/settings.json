@@ -1,0 +1,7 @@
+{
+  "python.defaultInterpreter": "C:\\Users\\ModeLabQBI\\anaconda3\\envs\\fibremodes\\python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/.."
+  ],
+  "jupyter.kernels.filter": []
+}

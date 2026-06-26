@@ -1,0 +1,25 @@
+# fibremodes dependencies (from imports in solvers/, analytical/, utilities/, tests/)
+# Python >= 3.10 recommended
+
+# --- core (required) ---
+numpy>=2.0,<2.6
+scipy>=1.14,<1.17
+matplotlib>=3.7
+numexpr>=2.8
+numba>=0.57
+
+# --- GPU (CUDA toolkit 13.x, e.g. 13.2) ---
+# Uses system CUDA 13.2; do not install plain `cupy` alongside this wheel.
+cupy-cuda13x>=14.0
+
+# --- optional CPU parallel paths (analytical/LG/toolbox) ---
+ipyparallel>=8.0
+
+# --- notebooks / testing ---
+jupyter>=1.0
+ipykernel>=6.0
+laserbeamsize
+
+# Not on PyPI in this repo (install separately if needed):
+#   custom_plotting  — scalarmodesolver_examples.ipynb
+#   mark_lib         — mode_generation_core_library __main__ demo only
