@@ -91,17 +91,39 @@ from fibremodes.analytical.LG.toolbox import ComputeAllLGmodes_list, graded_inde
 from fibremodes.utilities.overlaps import overlaps
 ```
 
-## Environment setup
+## Installation
+
+### From GitHub (tagged release)
+
+```bash
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.0.0"
+```
+
+Other packages can pin the same dependency in `requirements.txt`:
+
+```text
+fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.0.0
+```
+
+### Local development (editable install)
+
+```bash
+git clone git@github.com:MarKo7s/fibremodes.git
+cd fibremodes
+pip install -e ".[gpu,parallel,notebooks]"
+```
+
+### Conda environment
 
 ```bash
 conda create -n fibremodes python=3.11 -y
 conda activate fibremodes
-pip install -r requirements.txt
+pip install -e ".[gpu,parallel,notebooks]"
 ```
 
-`requirements.txt` includes `cupy-cuda13x` for CUDA toolkit 13.x (e.g. 13.2). The toolkit installer sets system `CUDA_PATH`, but terminals/Jupyter kernels started **before** install (or outside conda) may not see it.
+`cupy-cuda13x` targets CUDA toolkit 13.x (e.g. 13.2). The toolkit installer sets system `CUDA_PATH`, but terminals/Jupyter kernels started **before** install (or outside conda) may not see it.
 
-This env sets `CUDA_PATH` via `conda env config vars` and prepends `%CUDA_PATH%\bin` on `conda activate fibremodes`. **Restart the Jupyter kernel** after activating.
+This env can set `CUDA_PATH` via `conda env config vars` and prepend `%CUDA_PATH%\bin` on `conda activate fibremodes`. **Restart the Jupyter kernel** after activating.
 
 Register the Jupyter kernel (once):
 
@@ -109,4 +131,53 @@ Register the Jupyter kernel (once):
 python -m ipykernel install --user --name fibremodes --display-name "Python (fibremodes)"
 ```
 
-Add `C:\Users\ModeLabQBI\LAB\algorithms` to `PYTHONPATH` so `import fibremodes` works.
+`requirements.txt` remains available for legacy workflows; prefer `pip install -e ".[gpu]"` for package installs.
+
+## Developer notes
+
+### Versioning
+
+The package version is defined in **one place only**: `pyproject.toml` → `[project].version`.
+
+Do **not** edit `__init__.py` on each release. `fibremodes.__version__` is read from pip metadata after install (`importlib.metadata`).
+
+Check the installed version:
+
+```bash
+pip show fibremodes
+python -c "import fibremodes; print(fibremodes.__version__)"
+```
+
+Use [semantic versioning](https://semver.org/): `MAJOR.MINOR.PATCH` (e.g. `1.0.0` → `1.0.1` for fixes, `1.1.0` for features).
+
+### Releasing a new version
+
+1. Bump `version` in `pyproject.toml`.
+2. Commit: `git commit -am "Bump version to X.Y.Z"`.
+3. Run the release script from the repo root:
+
+```bash
+python scripts/release.py
+```
+
+The script reads the version from `pyproject.toml`, pushes `main`, creates git tag `vX.Y.Z`, and pushes the tag. After that, others can install with:
+
+```bash
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@vX.Y.Z"
+```
+
+Dry run (no git changes):
+
+```bash
+python scripts/release.py --dry-run
+```
+
+**Requirements before release:** clean working tree (all changes committed); tag `vX.Y.Z` must not already exist on GitHub.
+
+### First-time packaging (maintainers)
+
+After cloning, use editable install for development:
+
+```bash
+pip install -e ".[gpu,parallel,notebooks]"
+```
