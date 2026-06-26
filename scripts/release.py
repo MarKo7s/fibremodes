@@ -62,7 +62,7 @@ def remote_tag_exists(tag: str) -> bool:
 
 
 def ensure_clean_tree(dry_run: bool) -> None:
-    status = git_output("status", "--porcelain")
+    status = git_output("status", "--porcelain", "--untracked-files=no")
     if status:
         raise SystemExit(
             "Working tree is not clean. Commit or stash changes before releasing:\n"
