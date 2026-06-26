@@ -10,6 +10,7 @@ Mode generation class
 from . import toolbox as mgcl
 from numpy import *
 import numpy as np
+from typing import cast
 try:
     import cupy as cp
 except ModuleNotFoundError:
@@ -50,12 +51,13 @@ class LGmodes():
         xx = mgcl.np.arange(-N//2,N//2,1) * px_size
         self.X,self.Y = mgcl.np.meshgrid(xx,xx)     
         self.index = mgcl.np.array([0])
-        self.LGmodesArray = None
-        self.LGmodesArrayFarField = None
-        self.LGmodesArray__ = None
-        self.LGmodesArrayFarField__ = None
-        self.numModes = None
-        self.numModesAll = None
+        # GPU engine computes on device but LGmodes_GPU returns host numpy arrays by default.
+        self.LGmodesArray: np.ndarray | None = None
+        self.LGmodesArrayFarField: np.ndarray | None = None
+        self.LGmodesArray__: np.ndarray | None = None
+        self.LGmodesArrayFarField__: np.ndarray | None = None
+        self.numModes: int | None = None
+        self.numModesAll: int | None = None
         self.parameters: dict = {}
         
         #Modes atributes
@@ -64,11 +66,13 @@ class LGmodes():
         if generateModes == True:
         
             self.index = self.computeCoefs()
-            self.LGmodesArray = self.computeLGmodes(engine, multicore)
-            self.numModes = self.LGmodesArray.shape[0]
+            modes = self.computeLGmodes(engine, multicore)
+            self.LGmodesArray = modes
+            self.numModes = modes.shape[0]
             if wholeSet == True:
-                self.LGmodesArray__ = self.computeAllmodes(multicore)
-                self.numModesAll = self.LGmodesArray__.shape[0]            
+                modes_all = self.computeAllmodes(multicore)
+                self.LGmodesArray__ = modes_all
+                self.numModesAll = modes_all.shape[0]            
             if farfield == True:
                 self.LGmodesArrayFarField = self.computeFarFieldLGmodes()
                 if wholeSet == True:
@@ -107,20 +111,29 @@ class LGmodes():
         self.farfieldGouyPhase = mgcl.LGFarFieldGouyPhase(self.index)
         return( mgcl.applyphase(self.LGmodesArray, self.farfieldGouyPhase) )
         
-    def computeLGmodes(self, targetEngine, multi):
+    def computeLGmodes(self, targetEngine, multi) -> np.ndarray:
         print('Generating modes...')
-        return( mgcl.LGmodes(self.w0,self.X,self.Y,self.index, engine = targetEngine, multicore = multi) )
+        return cast(
+            np.ndarray,
+            mgcl.LGmodes(self.w0, self.X, self.Y, self.index, engine=targetEngine, multicore=multi),
+        )
     
     def updateLGmodes(self,targetEngine, multi):
          """ 
          Update or compute LGmodes in case you changed object atributes 
          """
-         self.LGmodesArray = mgcl.LGmodes(self.w0,self.X,self.Y,self.index, engine = targetEngine, multicore = multi)
-         self.numModes = self.LGmodesArray.shape[0]
+         modes = cast(
+             np.ndarray,
+             mgcl.LGmodes(self.w0, self.X, self.Y, self.index, engine=targetEngine, multicore=multi),
+         )
+         self.LGmodesArray = modes
+         self.numModes = modes.shape[0]
     
-    def computeAllmodes(self, multi):
+    def computeAllmodes(self, multi) -> np.ndarray:
         print('Generating rest of the modes...')
-        return( mgcl.computeWholeSetofModes( self.LGmodesArray, self.index,multicore = multi ) )
+        if self.LGmodesArray is None:
+            raise RuntimeError("LGmodesArray is not set; call computeLGmodes first.")
+        return mgcl.computeWholeSetofModes(self.LGmodesArray, self.index, multicore=multi)
     
     def computeAllmodesFarField(self, multi):
         print('Generating rest of the modes at the far field...')
@@ -130,8 +143,9 @@ class LGmodes():
          """ 
          Update or compute LGmodes in case you changed object atributes 
          """
-         self.LGmodesArray__ = mgcl.computeWholeSetofModes(self.LGmodesArray, self.index,multicore = multi)
-         self.numModesAll = self.LGmodesArray__.shape[0]
+         modes_all = mgcl.computeWholeSetofModes(self.LGmodesArray, self.index, multicore=multi)
+         self.LGmodesArray__ = modes_all
+         self.numModesAll = modes_all.shape[0]
       
     def getSpecs(self):
         p = {
@@ -148,10 +162,10 @@ class LGmodes():
 
 
 if __name__ == '__main__':
-    t = mgcl.times
     import cupy as cp
+
     print(cp.cuda.Device(0).mem_info)
-    t.tic()
+    mgcl.times.tic()
 
     LGgpu = LGmodes(48, 22 , 256, 1 , generateModes = True, wholeSet = True, farfield = False, engine = 'GPU', multicore = True)
-    t.toc()
+    mgcl.times.toc()

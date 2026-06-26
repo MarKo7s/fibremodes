@@ -49,11 +49,13 @@ def pol2cart(rho, phi):
     return(x, y)
 
 class times:
+    @staticmethod
     def tic():
         global start_time
         start_time = time.time()
         return(start_time)
 
+    @staticmethod
     def toc():
         elapsed_time = time.time() - start_time
         print("Elapsed time = ",elapsed_time)
@@ -471,12 +473,10 @@ def eval_genlaguerreGPU(p,l,x) :
     k_gpu = cp.arange(0,maxK+1,1, int)
     x_gpu = cp.asarray(x).astype(MODES_TYPE_FLOAT64) #Argument of the LG function
     Xmatrix = cp.power( x_gpu, k_gpu[:,None,None] )  * cp.power((-1),k_gpu[:,None,None])
-    Xmatrix.shape
-    
+
     N = int( p.shape[0])
     O = np.zeros((k.shape[0],N))
-    O.shape
-    
+
     for i in k:
         O[i,:] = Okernel(p,l,i)
     O[O == np.inf] = 0
