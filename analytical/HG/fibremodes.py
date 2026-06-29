@@ -1,7 +1,7 @@
 
 import numpy as np
 from numpy import *
-from scipy.special import eval_hermite
+from scipy.special import eval_hermite, factorial
 
 ##HG POLYNOMIAL STUFF
 def HG(w,J,x):
