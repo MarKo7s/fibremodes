@@ -7,7 +7,7 @@ fibremodes/
 ├── solvers/              numerical eigenmode solver
 ├── analytical/
 │   ├── LG/               Laguerre-Gaussian modes (ModesGen + toolbox)
-│   └── HG/               placeholder (not implemented)
+│   └── HG/               Hermite-Gaussian modes (CPU, separable 1D)
 ├── utilities/            overlaps, transmission-matrix tools
 └── tests/                notebooks and future pytest
 ```
@@ -78,9 +78,47 @@ LGbases = LGmodes(
 - `fibremodes.utilities.overlaps` — modal decomposition / reconstruction
 - `fibremodes.utilities.transmission_matrix_generator` — synthetic MMF transmission matrices
 
-## HG modes
+## Analytical HG modes
 
-Not supported in this version yet (`analytical/HG/` is a placeholder).
+- Module: `fibremodes.analytical.HG.fibremodes` (`makeHGModes`)
+
+Hermite-Gaussian modes are **separable** in Cartesian coordinates. Each 1D profile is
+
+$$
+\mathrm{HG}_J(x) = \left(\frac{2}{\pi\, 2^J J!\, w_0}\right)^{1/2}
+  H_J\!\left(\frac{\sqrt{2}}{w_0}\,x\right)
+  \exp\!\left(-\frac{x^2}{w_0^2}\right)
+$$
+
+where $H_J$ is the physicist's Hermite polynomial (`scipy.special.eval_hermite`), $J$ is the mode order along one axis, and $w_0$ is the Gaussian beam waist (same convention as LG: $w_0 = \mathrm{MFD}/2$).
+
+The 2D mode is the outer product of two 1D profiles:
+
+$$
+\mathrm{HG}_{m,n}(x,y) = \mathrm{HG}_m(x)\,\mathrm{HG}_n(y)
+$$
+
+`makeHGModes` builds a **triangular mode group** of size $G$: for each $i = 0,\ldots,G-1$ it emits all pairs $(m,n)$ with $m+n=i$, giving $G(G+1)/2$ modes in total.
+
+### CPU implementation (fast via separability)
+
+This path is CPU-only (NumPy/SciPy), but it stays fast because the expensive Hermite evaluation runs on **1D coordinate vectors** only. For grid size $N_f \times N_f$:
+
+1. Build 1D samples $x = [-N_f/2,\ldots,N_f/2-1]$.
+2. Evaluate $G$ distinct 1D profiles $\mathrm{HG}_J(x)$ once (`makebasis` / `HG`).
+3. Form each 2D mode as an outer product with `einsum('...ki,...kj->kij', targetY, targetX)` — no 2D Hermite loop.
+
+So cost scales like $\mathcal{O}(G\,N_f + G^2 N_f^2)$ for the outer products, rather than evaluating polynomials on every $(x,y)$ pixel for every mode.
+
+Example:
+
+```python
+from fibremodes.analytical.HG.fibremodes import makeHGModes
+
+# Nf x Nf grid, beam waist w0, G mode groups -> G*(G+1)/2 modes
+HGmodes = makeHGModes(Nf=512, w0=17, G=16)
+# shape: (mode_index, Nf, Nf)
+```
 
 ## Canonical imports
 
@@ -88,6 +126,7 @@ Not supported in this version yet (`analytical/HG/` is a placeholder).
 from fibremodes.solvers.scalarmodesolver import scalarmodeEigsSolver
 from fibremodes.analytical.LG.ModesGen import LGmodes
 from fibremodes.analytical.LG.toolbox import ComputeAllLGmodes_list, graded_index_fiber_coefs
+from fibremodes.analytical.HG.fibremodes import makeHGModes
 from fibremodes.utilities.overlaps import overlaps
 ```
 
