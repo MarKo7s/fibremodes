@@ -191,15 +191,18 @@ Use [semantic versioning](https://semver.org/): `MAJOR.MINOR.PATCH` (e.g. `1.0.0
 
 ### Releasing a new version
 
-1. Bump `version` in `pyproject.toml`.
-2. Commit: `git commit -am "Bump version to X.Y.Z"`.
-3. Run the release script from the repo root:
+1. Add an entry for the new version at the top of `CHANGELOG.md`.
+2. Bump `version` in `pyproject.toml`.
+3. Commit all changes (including the changelog).
+4. Run the release script from the repo root:
 
 ```bash
-python scripts/release.py
+python scripts/release.py --from-changelog
 ```
 
-The script reads the version from `pyproject.toml`, pushes `main`, creates git tag `vX.Y.Z`, and pushes the tag. After that, others can install with:
+The script reads the version from `pyproject.toml`, pushes `main`, creates annotated git tag `vX.Y.Z`, and pushes the tag. With `--from-changelog`, the tag message is taken from the matching `CHANGELOG.md` section. You can also pass a custom message with `--message "..."` (overrides `--from-changelog`).
+
+After that, others can install with:
 
 ```bash
 pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@vX.Y.Z"
@@ -208,7 +211,13 @@ pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@vX.
 Dry run (no git changes):
 
 ```bash
-python scripts/release.py --dry-run
+python scripts/release.py --from-changelog --dry-run
+```
+
+Optional: create a GitHub Release page with the same notes (`gh` CLI required):
+
+```bash
+gh release create vX.Y.Z --title "fibremodes X.Y.Z" --notes-file CHANGELOG.md
 ```
 
 **Requirements before release:** clean working tree (all changes committed); tag `vX.Y.Z` must not already exist on GitHub.

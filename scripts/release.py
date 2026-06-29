@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
-import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = REPO_ROOT / "pyproject.toml"
+CHANGELOG = REPO_ROOT / "CHANGELOG.md"
 REPOSITORY_URL = "https://github.com/MarKo7s/fibremodes.git"
 
 
@@ -22,12 +24,68 @@ def read_version(pyproject_path: Path) -> str:
     return str(version)
 
 
+def extract_changelog_section(version: str, changelog_path: Path = CHANGELOG) -> str:
+    if not changelog_path.is_file():
+        raise SystemExit(f"Missing {changelog_path}")
+
+    text = changelog_path.read_text(encoding="utf-8")
+    header = re.search(
+        rf"^## \[{re.escape(version)}\](?:\s[^\n]*)?\n",
+        text,
+        re.MULTILINE,
+    )
+    if not header:
+        raise SystemExit(
+            f"No CHANGELOG section for version {version}. "
+            f"Add a '## [{version}]' heading to {changelog_path.name}."
+        )
+
+    start = header.end()
+    next_section = re.search(r"^## \[", text[start:], re.MULTILINE)
+    end = start + next_section.start() if next_section else len(text)
+    section = text[start:end].strip()
+    if not section:
+        raise SystemExit(f"Empty CHANGELOG section for version {version}")
+    return section
+
+
+def resolve_tag_message(version: str, message: str | None, from_changelog: bool) -> str:
+    if message:
+        return message
+    if from_changelog:
+        body = extract_changelog_section(version)
+        return f"Release fibremodes {version}\n\n{body}"
+    return f"Release fibremodes {version}"
+
+
 def run_git(args: list[str], *, dry_run: bool) -> None:
     cmd = ["git", *args]
     print("+", " ".join(cmd))
     if dry_run:
         return
     subprocess.run(cmd, cwd=REPO_ROOT, check=True)
+
+
+def run_git_tag(tag: str, message: str, *, dry_run: bool) -> None:
+    if dry_run:
+        print(f"+ git tag -a {tag} -F <message>")
+        print(message)
+        return
+
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", delete=False, suffix=".txt"
+    ) as handle:
+        handle.write(message)
+        message_path = handle.name
+
+    try:
+        subprocess.run(
+            ["git", "tag", "-a", tag, "-F", message_path],
+            cwd=REPO_ROOT,
+            check=True,
+        )
+    finally:
+        Path(message_path).unlink(missing_ok=True)
 
 
 def git_output(*args: str) -> str:
@@ -90,7 +148,15 @@ def main() -> None:
     )
     parser.add_argument(
         "--message",
-        help="Annotated tag message (default: Release fibremodes {version})",
+        help="Annotated tag message (overrides --from-changelog)",
+    )
+    parser.add_argument(
+        "--from-changelog",
+        action="store_true",
+        help=(
+            "Use the CHANGELOG.md section for the current version as the tag message "
+            "(prepended with 'Release fibremodes {version}')"
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -104,7 +170,7 @@ def main() -> None:
 
     version = read_version(PYPROJECT)
     tag = f"v{version}"
-    message = args.message or f"Release fibremodes {version}"
+    message = resolve_tag_message(version, args.message, args.from_changelog)
 
     ensure_clean_tree(args.dry_run)
     ensure_branch(args.branch, args.dry_run)
@@ -115,7 +181,7 @@ def main() -> None:
         raise SystemExit(f"Tag {tag} already exists on origin.")
 
     run_git(["push", "origin", args.branch], dry_run=args.dry_run)
-    run_git(["tag", "-a", tag, "-m", message], dry_run=args.dry_run)
+    run_git_tag(tag, message, dry_run=args.dry_run)
     run_git(["push", "origin", tag], dry_run=args.dry_run)
 
     print()
