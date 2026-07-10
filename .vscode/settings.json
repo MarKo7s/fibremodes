@@ -3,5 +3,8 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}/.."
   ],
-  "jupyter.kernels.filter": []
+  "jupyter.kernels.filter": [],
+  "cursorpyright.analysis.extraPaths": [
+    "${workspaceFolder}/.."
+  ]
 }

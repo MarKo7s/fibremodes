@@ -52,9 +52,9 @@ class LGmodes():
         self.X,self.Y = mgcl.np.meshgrid(xx,xx)     
         self.index = mgcl.np.array([0])
         # GPU engine computes on device but LGmodes_GPU returns host numpy arrays by default.
-        self.LGmodesArray: np.ndarray | None = None
+        self.LGmodesArray: np.ndarray | None = None #Stores half set of modes (half piramid)
         self.LGmodesArrayFarField: np.ndarray | None = None
-        self.LGmodesArray__: np.ndarray | None = None
+        self.LGmodesArray__: np.ndarray | None = None #Stores the whole set of modes (full piramid)
         self.LGmodesArrayFarField__: np.ndarray | None = None
         self.numModes: int | None = None
         self.numModesAll: int | None = None
