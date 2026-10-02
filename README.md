@@ -16,9 +16,40 @@ Root-level `ModesGen.py`, `mode_generation_core_library.py`, and `scalarmodesolv
 
 ## Scalar mode solver
 
-Solve scalar wave equation under arbitrary refractive index profile (weakly guiding fibres).
+`scalarmodeEigsSolver` (`fibremodes.solvers.scalarmodesolver`) computes the guided modes of a weakly guiding fibre for an arbitrary refractive-index profile \(n(x,y)\). A mode with propagation factor \(e^{-i\beta z}\) satisfies the scalar Helmholtz equation
 
-- Module: `fibremodes.solvers.scalarmodesolver`
+$$
+\nabla_\perp^2 E(x,y) + k_0^2 n^2(x,y)\, E(x,y) = \beta^2 E(x,y),
+$$
+
+where \(k_0 = 2\pi/\lambda\). The mode field \(E\) and \(\beta^2\) are the eigenfunction and eigenvalue.
+
+On a Cartesian grid this is the five-point stencil
+
+$$
+\begin{aligned}
+&\frac{E_{i,j+1}+E_{i,j-1}}{\Delta x^2}
++\frac{E_{i+1,j}+E_{i-1,j}}{\Delta y^2}\\
+&+\left(k_0^2 n_{i,j}^2-\frac{2}{\Delta x^2}-\frac{2}{\Delta y^2}\right)E_{i,j}
+=\beta^2 E_{i,j}.
+\end{aligned}
+$$
+
+The stencil is stored as a sparse matrix and solved with `scipy.sparse.linalg.eigsh`, shifted to \(\max(k_0 n)^2\), so the \(K\) eigenvalues found are the largest \(\beta^2\) (the guided modes). The returned `beta` array is these eigenvalues \(\beta^2\), in ascending order. The effective index is
+
+$$
+n_\mathrm{eff}=\frac{\beta}{k_0}=\frac{\sqrt{\texttt{beta}}}{k_0}.
+$$
+
+`kk.max()` is \(\max(k_0 n)^2\), the shift used by the eigensolver. The example notebook plots `beta / kk.max() * n_peak`, which equals \(n_\mathrm{eff}^2 / n_\mathrm{peak}\).
+
+Boundary keys `bc['l']`, `bc['r']`, `bc['t']`, `bc['b']` close the grid with a ghost point half a step outside the domain:
+
+- `'a'` (the default): odd reflection, so \(E = 0\) on that outer edge.
+- any other value: even reflection, so the normal derivative vanishes.
+
+Use a slightly rectangular grid (`dy = dx + 1e-11` in the examples). That split lifts the degeneracy of LP pairs and aligns the eigenvectors with the \(x\) and \(y\) axes.
+
 - Examples: `tests/scalarmodesolver_examples.ipynb`
 
 ### Solutions examples
