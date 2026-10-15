@@ -4,7 +4,8 @@
 
 ```
 fibremodes/
-├── solvers/              numerical eigenmode solver
+├── solvers/              numerical eigenmode solvers
+│   └── fiberprofile/     step, graded, and double-clad index profiles
 ├── analytical/
 │   ├── LG/               Laguerre-Gaussian modes (ModesGen + toolbox)
 │   └── HG/               Hermite-Gaussian modes (CPU, separable 1D)
@@ -56,6 +57,60 @@ Use a slightly rectangular grid (`dy = dx + 1e-11` in the examples). That split 
 
 ![Step index fibre](images/solver_results_SI.png)
 ![Graded index fibre](images/solver_results_GI.png)
+
+## Radial mode solver
+
+`RadialModeSolver` (`fibremodes.solvers.radialmodesolver`) solves the radial scalar Helmholtz equation for an axisymmetric index \(n(r)\). A field \(E = R(r)\,e^{i L \phi}\,e^{-i\beta z}\) reduces to
+
+$$
+\frac{d^2 R}{dr^2} + \frac{1}{r}\frac{dR}{dr} + \left(k_0^2 n(r)^2 - \frac{L^2}{r^2}\right) R = \beta^2 R.
+$$
+
+Pass the radius, including the origin, and the 1D index. The origin is singular, so the finite-difference matrix is built on `r[1:]` (`solver.r_nodes`). Even \(L\) uses a Neumann condition there and odd \(L\) a Dirichlet condition. The outer edge is Dirichlet. A WKB phase integral, plus `margin` (default 4), sets how many eigenvalues `scipy.sparse.linalg.eigs` requests.
+
+`calculate_modes()` increments \(L\) from 0 and stops at the first azimuthal order with no guided eigenvalues. `calculate_modes(L_max)` also stops once \(|L|\) would exceed `L_max`. Each guided solution is a `RadialMode`:
+
+| field | meaning |
+| --- | --- |
+| `L` | azimuthal index; \(L > 0\) is stored as \(+L\) and \(-L\) with the same radial amplitude |
+| `M` | radial index, starting at 1 |
+| `beta` | propagation constant \(\beta\) (the Cartesian solver returns \(\beta^2\)) |
+| `mode_group` | \(2M + \|L\| - 1\) |
+| `R` | radial amplitude on `solver.r_nodes` |
+
+The list is sorted by mode group, then by \(L\) from negative to positive, and saved on `solver.modes`. The effective index is
+
+$$
+n_\mathrm{eff}=\frac{\beta}{k_0}=\texttt{beta}\,\frac{\lambda}{2\pi}.
+$$
+
+`calculate_2d_modes(N, window_max=None)` restores the origin sample, interpolates each amplitude onto a square grid from `-window_max` to `+window_max`, and multiplies by \(e^{i L \phi}\). Omitting `window_max` uses the stored outer radius `r[-1]`. Points outside the solved radius are zero. A later call with a new `N` or `window_max` resamples without solving again. Each result is a `CartesianMode` whose `field` has shape `(N, N)`. `modes_2D()` stacks those fields as `(n_modes, N, N)`.
+
+Index profiles live in `fibremodes.solvers.fiberprofile`. Each class evaluates its equation once on a stored radial curve. Later sample counts interpolate that curve.
+
+- `index_1d(N, window_max=None)` — radius and index from `0` to `window_max`.
+- `index_2d(N=None, window_max=None)` — Cartesian axis and `(N, N)` index. When `N` is omitted it uses the latest `index_1d` sample count.
+- `plot()` — Cartesian map and radial curve.
+
+`StepIndex`, `GradedIndex`, and `DoubleClad` share those methods. Pass `n_clad` or `na`; the cladding index is \(\sqrt{n^2 - \mathrm{NA}^2}\). `r_max` must lie outside the last index step so the outer index is on the stored curve.
+
+- `StepIndex(core_radius, r_max, n_core, n_clad=None, na=None)` — \(n_\mathrm{core}\) for \(r < a\), cladding outside.
+- `GradedIndex(..., alpha=2)` — power-law core. `alpha = 2` is the parabolic profile.
+- `DoubleClad(core_radius, clad1_radius, r_max, n_core, na_core=..., na_clad1=...)` — core, inner cladding, and outer cladding. Numerical apertures or the two cladding indices can be passed directly.
+
+```python
+from fibremodes.solvers import GradedIndex, RadialModeSolver
+
+fibre = GradedIndex(core_radius=31.25e-6, r_max=50e-6, n_core=1.4666, na=0.275)
+r, n_r = fibre.index_1d(N=2000)
+fibre.plot()
+solver = RadialModeSolver(r, n_r, wavelength=1565e-9)
+modes = solver.calculate_modes()
+cartesian = solver.calculate_2d_modes(N=256)
+fields = solver.modes_2D()  # (n_modes, 256, 256)
+```
+
+Example notebook: `tests/radialmodesolver_examples.ipynb`.
 
 ## Analytical solution for GI fibres (LG modes)
 
@@ -154,6 +209,7 @@ HGmodes = makeHGModes(Nf=512, w0=17, G=16)
 ## Canonical imports
 
 ```python
+from fibremodes.solvers import DoubleClad, GradedIndex, RadialModeSolver, StepIndex
 from fibremodes.solvers.scalarmodesolver import scalarmodeEigsSolver
 from fibremodes.analytical.LG.ModesGen import LGmodes
 from fibremodes.analytical.LG.toolbox import ComputeAllLGmodes_list, graded_index_fiber_coefs
@@ -166,13 +222,13 @@ from fibremodes.utilities.overlaps import overlaps
 ### From GitHub (tagged release)
 
 ```bash
-pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.0.0"
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.2.0"
 ```
 
 Other packages can pin the same dependency in `requirements.txt`:
 
 ```text
-fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.0.0
+fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.2.0
 ```
 
 ### Local development (editable install)

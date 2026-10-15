@@ -1,7 +1,7 @@
 [project]
 name = "fibremodes"
-version = "1.1.1"
-description = "Fibre mode calculation — scalar solver and analytical basis calculation"
+version = "1.2.0"
+description = "Fibre mode calculation — Cartesian and radial scalar solvers, and analytical LG/HG bases"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -28,6 +28,7 @@ package-dir = {"fibremodes" = "."}
 packages = [
   "fibremodes",
   "fibremodes.solvers",
+  "fibremodes.solvers.fiberprofile",
   "fibremodes.analytical",
   "fibremodes.analytical.LG",
   "fibremodes.analytical.LG.toolbox",
