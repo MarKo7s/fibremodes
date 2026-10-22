@@ -45,6 +45,16 @@ class GradedIndex(FibreProfile):
         wavelength=None,
         n_samples=None,
     ):
+        self._remember_init(
+            core_radius=core_radius,
+            r_max=r_max,
+            n_core=n_core,
+            n_clad=n_clad,
+            na=na,
+            alpha=alpha,
+            wavelength=wavelength,
+            n_samples=n_samples,
+        )
         self.core_radius = float(core_radius)
         self.n_core = float(n_core)
         self.alpha = float(alpha)

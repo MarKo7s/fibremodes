@@ -271,13 +271,13 @@ from fibremodes.utilities.overlaps import overlaps
 ### From GitHub (tagged release)
 
 ```bash
-pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.3.0"
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.4.0"
 ```
 
 Other packages can pin the same dependency in `requirements.txt`:
 
 ```text
-fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.3.0
+fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.4.0
 ```
 
 ### Local development (editable install)

@@ -58,6 +58,24 @@ class FibreProfile:
     def estimate_MFD(self):
         raise NotImplementedError
 
+    def _remember_init(self, **kwargs):
+        """Store the constructor arguments exactly as this profile was called."""
+        self._init_properties = dict(kwargs)
+
+    def get_init_properties(self) -> dict:
+        """Return the constructor arguments needed to build this profile again.
+
+        Keys are the ``__init__`` parameter names. Values are what the caller
+        passed, including ``None`` for an omitted alternative such as ``na``
+        when ``n_clad`` was given. ``Type(**profile.get_init_properties())``
+        rebuilds the profile.
+        """
+        try:
+            recorded = self._init_properties
+        except AttributeError:
+            raise RuntimeError("This profile has no recorded constructor arguments.") from None
+        return dict(recorded)
+
     def boundary_radii(self) -> tuple[float, ...]:
         """Radii of the index steps, in metres."""
         return ()

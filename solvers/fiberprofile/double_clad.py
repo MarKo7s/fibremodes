@@ -46,6 +46,18 @@ class DoubleClad(FibreProfile):
         wavelength=None,
         n_samples=None,
     ):
+        self._remember_init(
+            core_radius=core_radius,
+            clad1_radius=clad1_radius,
+            r_max=r_max,
+            n_core=n_core,
+            na_core=na_core,
+            na_clad1=na_clad1,
+            n_clad1=n_clad1,
+            n_clad2=n_clad2,
+            wavelength=wavelength,
+            n_samples=n_samples,
+        )
         self.core_radius = float(core_radius)
         self.clad1_radius = float(clad1_radius)
         self.n_core = float(n_core)
