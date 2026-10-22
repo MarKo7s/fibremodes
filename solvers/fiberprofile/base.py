@@ -41,6 +41,8 @@ class FibreProfile:
         if n_samples < 2:
             raise ValueError("n_samples must be at least 2.")
         self.r_max = r_max
+        self.n_radial = n_samples
+        self.n_cartesian = n_samples
         self._r = np.linspace(0.0, r_max, n_samples)
         self._n = np.asarray(self._index_on_radius(self._r), dtype=float)
         if self._n.shape != self._r.shape:
@@ -48,6 +50,12 @@ class FibreProfile:
         self._sampled_n = None
 
     def _index_on_radius(self, r):
+        raise NotImplementedError
+
+    def estimate_num_modes(self, wav_nm, single_pol = True):
+        raise NotImplementedError
+
+    def estimate_MFD(self):
         raise NotImplementedError
 
     def boundary_radii(self) -> tuple[float, ...]:
@@ -66,31 +74,36 @@ class FibreProfile:
             raise ValueError("window_max must be positive.")
         return window_max
 
-    def index_1d(self, N, window_max=None):
+    def index_1d(self, N=None, window_max=None):
         """Radius and index from ``0`` to ``window_max`` with ``N`` samples.
 
-        ``window_max`` defaults to the stored outer radius. Values past that
-        radius keep the outer index. The sample count is remembered for a
-        later ``index_2d`` call that omits ``N``.
+        ``N`` defaults to ``n_radial``. ``window_max`` defaults to the stored
+        outer radius. Values past that radius keep the outer index. An
+        explicit ``N`` is remembered for a later ``index_2d`` call that omits
+        ``N``. A defaulted call does not replace that remembered count.
         """
+        explicit = N is not None
+        if N is None:
+            N = self.n_radial
         N = int(N)
         if N < 2:
             raise ValueError("N must be at least 2.")
         window = self._window(window_max)
         r = np.linspace(0.0, window, N)
         n = np.interp(r, self._r, self._n, left=self._n[0], right=self._n[-1])
-        self._sampled_n = N
+        if explicit:
+            self._sampled_n = N
         return r, n
 
     def index_2d(self, N=None, window_max=None):
         """Cartesian axis and ``(N, N)`` index on ``[-window_max, window_max]``.
 
-        ``N`` defaults to the sample count of the latest ``index_1d`` call,
-        or to the stored radial grid when ``index_1d`` has not been called.
+        ``N`` defaults to the sample count of the latest explicit ``index_1d``
+        call, or to ``n_cartesian`` when that call has not been made.
         ``rho = sqrt(x^2 + y^2)`` is interpolated from the stored curve.
         """
         if N is None:
-            N = self._sampled_n if self._sampled_n is not None else len(self._r)
+            N = self._sampled_n if self._sampled_n is not None else self.n_cartesian
         N = int(N)
         if N < 2:
             raise ValueError("N must be at least 2.")
@@ -104,18 +117,18 @@ class FibreProfile:
     def plot(self, N=None, N_2d=None, window_max=None):
         """Draw the Cartesian index and the radial curve.
 
-        ``N`` is the radial sample count. It defaults to the latest
-        ``index_1d`` count, or to the stored grid length. ``N_2d`` defaults
-        to that same ``N``.
+        ``N`` is the radial sample count and defaults to ``n_radial``.
+        ``N_2d`` defaults to ``n_cartesian``.
         """
         import matplotlib.pyplot as plt
         from matplotlib.patches import Circle
 
         if N is None:
-            N = self._sampled_n if self._sampled_n is not None else len(self._r)
+            r, n_r = self.index_1d(window_max=window_max)
+        else:
+            r, n_r = self.index_1d(N, window_max=window_max)
         if N_2d is None:
-            N_2d = N
-        r, n_r = self.index_1d(N, window_max=window_max)
+            N_2d = self.n_cartesian
         x, n_xy = self.index_2d(N=N_2d, window_max=window_max)
         window = float(x[-1])
 

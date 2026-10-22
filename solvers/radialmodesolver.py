@@ -261,3 +261,22 @@ class RadialModeSolver:
         if not self.cartesian_modes:
             raise RuntimeError("Call calculate_2d_modes before modes_2D.")
         return np.stack([mode.field for mode in self.cartesian_modes], axis=0)
+
+    def get_mfd(self):
+        """Mode-field diameter of the fundamental mode.
+
+        The first solved mode is fit to the Gaussian with the same radial
+        intensity second moment. The diameter is ``2 w0``, with ``w0`` the
+        1/e² intensity radius, in the same length unit as ``r``.
+        """
+        if not self._modes_ready or len(self.modes) == 0:
+            raise RuntimeError("Call calculate_modes before get_mfd.")
+        mode = self.modes[0]
+        radius = np.r_[0.0, self.r_nodes]
+        origin = 0.0 if mode.L % 2 else mode.R[0]
+        intensity = np.abs(np.r_[origin, mode.R]) ** 2
+        power = np.trapezoid(radius * intensity, radius)
+        if power <= 0:
+            raise RuntimeError("The fundamental mode has no intensity.")
+        second_moment = np.trapezoid(radius**3 * intensity, radius) / power
+        return float(2.0 * np.sqrt(2.0 * second_moment))

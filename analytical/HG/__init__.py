@@ -1,1 +1,5 @@
-"""Hermite-Gaussian mode support — not implemented yet."""
+"""Hermite-Gaussian analytical mode generation."""
+
+from .fibremodes import makeHGModes
+
+__all__ = ["makeHGModes"]

@@ -4,6 +4,11 @@
 
 ```
 fibremodes/
+├── catalog/              analytical and numerical route registry
+├── engine/               FibreEngine facade and shared ModeSet
+├── ui/                   PySide6 window (optional gui extra)
+│   ├── views/            spec form, resample controls, viewport
+│   └── helpers/          spec values, field color, display stack
 ├── solvers/              numerical eigenmode solvers
 │   └── fiberprofile/     step, graded, and double-clad index profiles
 ├── analytical/
@@ -88,20 +93,22 @@ $$
 
 Index profiles live in `fibremodes.solvers.fiberprofile`. Each class evaluates its equation once on a stored radial curve. Later sample counts interpolate that curve.
 
-- `index_1d(N, window_max=None)` — radius and index from `0` to `window_max`.
-- `index_2d(N=None, window_max=None)` — Cartesian axis and `(N, N)` index. When `N` is omitted it uses the latest `index_1d` sample count.
+- `index_1d(N=None, window_max=None)` — radius and index from `0` to `window_max`. `N` defaults to the radial sample count.
+- `index_2d(N=None, window_max=None)` — Cartesian axis and `(N, N)` index. `N` defaults to the Cartesian sample count, or to an explicit `index_1d` count when one was passed.
 - `plot()` — Cartesian map and radial curve.
 
-`StepIndex`, `GradedIndex`, and `DoubleClad` share those methods. Pass `n_clad` or `na`; the cladding index is \(\sqrt{n^2 - \mathrm{NA}^2}\). `r_max` must lie outside the last index step so the outer index is on the stored curve.
+`StepIndex`, `GradedIndex`, and `DoubleClad` share those methods. Pass `n_clad` or `na`; the cladding index is \(\sqrt{n^2 - \mathrm{NA}^2}\). `r_max` must lie outside the last index step so the outer index is on the stored curve. Omit `n_samples` and pass `wavelength` in metres to size the stored curve from the solver estimate: the radial grid is half of that count, and the Cartesian grid keeps the full count. Pass `n_samples` to choose the count yourself.
 
-- `StepIndex(core_radius, r_max, n_core, n_clad=None, na=None)` — \(n_\mathrm{core}\) for \(r < a\), cladding outside.
-- `GradedIndex(..., alpha=2)` — power-law core. `alpha = 2` is the parabolic profile.
-- `DoubleClad(core_radius, clad1_radius, r_max, n_core, na_core=..., na_clad1=...)` — core, inner cladding, and outer cladding. Numerical apertures or the two cladding indices can be passed directly.
+- `StepIndex(core_radius, r_max, n_core, n_clad=None, na=None, wavelength=None, n_samples=None)` — \(n_\mathrm{core}\) for \(r < a\), cladding outside.
+- `GradedIndex(..., alpha=2, wavelength=None, n_samples=None)` — power-law core. `alpha = 2` is the parabolic profile.
+- `DoubleClad(core_radius, clad1_radius, r_max, n_core, na_core=..., na_clad1=..., wavelength=None, n_samples=None)` — core, inner cladding, and outer cladding. Numerical apertures or the two cladding indices can be passed directly. The automatic count uses the larger aperture.
 
 ```python
 from fibremodes.solvers import GradedIndex, RadialModeSolver
 
-fibre = GradedIndex(core_radius=31.25e-6, r_max=50e-6, n_core=1.4666, na=0.275)
+fibre = GradedIndex(
+    core_radius=31.25e-6, r_max=50e-6, n_core=1.4666, na=0.275, wavelength=1565e-9,
+)
 r, n_r = fibre.index_1d(N=2000)
 fibre.plot()
 solver = RadialModeSolver(r, n_r, wavelength=1565e-9)
@@ -206,9 +213,51 @@ HGmodes = makeHGModes(Nf=512, w0=17, G=16)
 # shape: (mode_index, Nf, Nf)
 ```
 
+## Catalog and engine
+
+`catalog` lists the analytical bases and the numerical fibres, including the inputs each one takes. `catalog.specs` checks those inputs and returns the object passed to `FibreEngine`. The engine calls the existing profile, solver, or basis generator and returns a `ModeSet`: stacked fields from `get_fields()`, per-mode indices, and, for a numerical solve, `n_eff` and the refractive-index `profile`. The radial solver decides where the azimuthal orders stop.
+
+```python
+from fibremodes import catalog, FibreEngine
+
+catalog.routes()              # ["analytical", "numerical"]
+catalog.list("numerical")     # step_index, graded_index, double_clad
+catalog.schema("double_clad")
+
+specs = catalog.specs(
+    "double_clad",
+    solver="radial",
+    core_radius=4e-6,
+    clad1_radius=20e-6,
+    r_max=30e-6,
+    n_core=1.46,
+    na_core=0.10,
+    na_clad1=0.22,
+    wavelength=1565e-9,
+    grid_n=256,
+)
+result = FibreEngine(specs).solve()
+result.get_fields()          # (n_modes, N, N), the solved grid
+result.resample(256)
+result.get_fields_resample() # (n_modes, 256, 256)
+```
+
+`solver` is `radial` or `scalar`. Pass `na` or `n_clad` for step and graded fibres. Double clad takes `na_core` or `n_clad1`, and `na_clad1` or `n_clad2`. Analytical keys are `LG` and `HG`; both take `mfd` as the fundamental mode-field diameter, and the generators use waist `mfd / 2`.
+
+Play with the routes in `tests/fibremodes_engine_interface_test.ipynb`.
+
+## Viewer
+
+`fibremodes.ui.launch` opens the catalog in a PySide6 window. Install it with `pip install -e ".[gui]"`. Pick a route, run a solve, open the viewport, then resample onto another window. The example notebook is `tests/fibremodes_engine_Widget_example.ipynb`.
+
+<!-- gui-screenshot -->
+![fibremodes GUI](docs/images/gui.png)
+<!-- /gui-screenshot -->
+
 ## Canonical imports
 
 ```python
+from fibremodes import FibreEngine, catalog
 from fibremodes.solvers import DoubleClad, GradedIndex, RadialModeSolver, StepIndex
 from fibremodes.solvers.scalarmodesolver import scalarmodeEigsSolver
 from fibremodes.analytical.LG.ModesGen import LGmodes
@@ -222,13 +271,13 @@ from fibremodes.utilities.overlaps import overlaps
 ### From GitHub (tagged release)
 
 ```bash
-pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.2.0"
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.3.0"
 ```
 
 Other packages can pin the same dependency in `requirements.txt`:
 
 ```text
-fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.2.0
+fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.3.0
 ```
 
 ### Local development (editable install)
