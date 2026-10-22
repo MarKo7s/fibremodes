@@ -110,7 +110,7 @@ class FibreModesWindow(QMainWindow):
         if self.result is None:
             return
         try:
-            self.result.resample(self.resample.sample_count(), self.resample.window_max())
+            self.result.resample(self.resample.sample_count(), w_max=self.resample.window_max())
         except Exception as exc:
             self.status.setText(str(exc))
             return

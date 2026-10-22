@@ -4,6 +4,8 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.sparse import spdiags
 from scipy.sparse.linalg import eigsh,eigs
 
+from ..utilities.sampling import cartesian_axis
+
 def scalarmodeEigsSolver(n, dx, dy, k0, xx, K = 10, bc = {'r':'a','l':'a','t':'a','b':'a'}, return_eigenvectors = True):
     
     '''
@@ -151,23 +153,21 @@ class ScalarModeSolver:
         self._modes_ready = True
         return self.modes
 
-    def resample_modes(self, N, window_max=None):
+    def resample_modes(self, N, w_max=None, pixel_pitch=None):
         """Interpolate the stored modes onto a new square window.
 
-        ``N`` is the sample count on each side. ``window_max`` is the
-        half-width. When it is omitted the half-width is ``x[-1]``. Samples
-        outside the solved window are zero. The result is saved on
-        ``modes_resampled`` and does not replace ``modes``.
+        ``N`` is the sample count on each side. ``w_max`` is the half-width
+        of ``linspace(-w_max, w_max, N)``. When it is omitted the half-width
+        is ``x[-1]``. ``pixel_pitch`` instead uses
+        ``arange(-N // 2, N // 2) * pixel_pitch``, which has a sample at 0.
+        Pass one of ``w_max`` or ``pixel_pitch``. Samples outside the solved
+        window are zero. The result is saved on ``modes_resampled`` and does
+        not replace ``modes``.
         """
         if not self._modes_ready:
             raise RuntimeError("Call calculate_modes before resample_modes.")
-        n_points = int(N)
-        if n_points < 2:
-            raise ValueError("N must be at least 2.")
-        window = float(self.x[-1] if window_max is None else window_max)
-        if window <= 0:
-            raise ValueError("window_max must be positive.")
-        axis = np.linspace(-window, window, n_points)
+        axis = cartesian_axis(N, w_max, pixel_pitch, default_half_width=self.x[-1])
+        n_points = int(axis.size)
         # Mode rows are y and columns are x, matching the finite-difference reshape.
         xx, yy = np.meshgrid(axis, axis, indexing="xy")
         points = np.stack([yy.ravel(), xx.ravel()], axis=-1)

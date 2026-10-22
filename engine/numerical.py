@@ -55,7 +55,7 @@ def _solve_radial(profile, wavelength, margin, grid_n, window_max):
     radius, index = profile.index_1d()
     solver = RadialModeSolver(radius, index, wavelength, margin=margin)
     solver.calculate_modes()
-    cartesian = solver.calculate_2d_modes(grid_n, window_max)
+    cartesian = solver.calculate_2d_modes(grid_n, w_max=window_max)
     k0 = 2.0 * np.pi / wavelength
     modes = []
     for mode in cartesian:
@@ -76,7 +76,7 @@ def _solve_scalar(profile, wavelength, margin, grid_n, window_max):
     solver.calculate_modes()
     resampled = grid_n != int(solver.x.size) or window_max is not None
     if resampled:
-        fields = solver.resample_modes(grid_n, window_max)
+        fields = solver.resample_modes(grid_n, w_max=window_max)
         axis = solver.x_resampled
     else:
         fields = solver.modes

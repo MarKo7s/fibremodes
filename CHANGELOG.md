@@ -4,6 +4,12 @@ All notable changes to fibremodes are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.5.0] - 2026-10-22
+
+### Added
+
+- `calculate_2d_modes`, `resample_modes`, and `ModeSet.resample` take `w_max` or `pixel_pitch`. `w_max` builds `linspace(-w_max, w_max, N)`. `pixel_pitch` builds `arange(-N // 2, N // 2) * pixel_pitch`, which has a sample at 0.
+
 ## [1.4.0] - 2026-10-22
 
 ### Added

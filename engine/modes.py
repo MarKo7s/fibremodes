@@ -8,6 +8,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 from ..solvers.fiberprofile.base import FibreProfile
+from ..utilities.sampling import cartesian_axis
 
 
 @dataclass
@@ -71,24 +72,22 @@ class ModeSet:
             return self.x_resampled
         return self.x
 
-    def resample(self, n, window_max=None) -> list[Mode]:
+    def resample(self, n, w_max=None, pixel_pitch=None) -> list[Mode]:
         """Interpolate the solved fields onto a new square window.
 
-        ``n`` is the sample count on each side. ``window_max`` is the
-        half-width. When it is omitted the half-width is the solved axis.
-        Samples outside that axis are zero. The solved ``modes`` stay in
-        place. The new fields are kept on ``modes_resampled``.
+        ``n`` is the sample count on each side. ``w_max`` is the half-width
+        of ``linspace(-w_max, w_max, n)``. When it is omitted the half-width
+        is the solved axis. ``pixel_pitch`` instead uses
+        ``arange(-n // 2, n // 2) * pixel_pitch``, which has a sample at 0.
+        Pass one of ``w_max`` or ``pixel_pitch``. Samples outside the solved
+        axis are zero. The solved ``modes`` stay in place. The new fields
+        are kept on ``modes_resampled``.
         """
         if not self.modes or self.x is None:
             raise RuntimeError("There are no solved modes to resample.")
-        n_points = int(n)
-        if n_points < 2:
-            raise ValueError("n must be at least 2.")
-        window = float(self.x[-1] if window_max is None else window_max)
-        if window <= 0:
-            raise ValueError("window_max must be positive.")
         source = np.asarray(self.x, dtype=float)
-        axis = np.linspace(-window, window, n_points)
+        axis = cartesian_axis(n, w_max, pixel_pitch, default_half_width=source[-1])
+        n_points = int(axis.size)
         xx, yy = np.meshgrid(axis, axis, indexing="xy")
         points = np.stack([yy.ravel(), xx.ravel()], axis=-1)
         resampled = []

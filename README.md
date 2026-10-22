@@ -89,7 +89,7 @@ $$
 n_\mathrm{eff}=\frac{\beta}{k_0}=\texttt{beta}\,\frac{\lambda}{2\pi}.
 $$
 
-`calculate_2d_modes(N, window_max=None)` restores the origin sample, interpolates each amplitude onto a square grid from `-window_max` to `+window_max`, and multiplies by \(e^{i L \phi}\). Omitting `window_max` uses the stored outer radius `r[-1]`. Points outside the solved radius are zero. A later call with a new `N` or `window_max` resamples without solving again. Each result is a `CartesianMode` whose `field` has shape `(N, N)`. `modes_2D()` stacks those fields as `(n_modes, N, N)`.
+`calculate_2d_modes(N, w_max=None, pixel_pitch=None)` restores the origin sample, interpolates each amplitude onto a square grid, and multiplies by \(e^{i L \phi}\). `w_max` is the half-width of `linspace(-w_max, w_max, N)`. Omitting it uses the stored outer radius `r[-1]`. `pixel_pitch` instead builds `arange(-N // 2, N // 2) * pixel_pitch`, which has a sample at 0. Pass one of the two. Points outside the solved radius are zero. A later call with a new grid resamples without solving again. Each result is a `CartesianMode` whose `field` has shape `(N, N)`. `modes_2D()` stacks those fields as `(n_modes, N, N)`. `ScalarModeSolver.resample_modes` and `ModeSet.resample` use the same two axes.
 
 Index profiles live in `fibremodes.solvers.fiberprofile`. Each class evaluates its equation once on a stored radial curve. Later sample counts interpolate that curve.
 
@@ -238,7 +238,8 @@ specs = catalog.specs(
 )
 result = FibreEngine(specs).solve()
 result.get_fields()          # (n_modes, N, N), the solved grid
-result.resample(256)
+result.resample(256, w_max=50e-6)          # linspace
+result.resample(256, pixel_pitch=0.5e-6)   # arange, sample at 0
 result.get_fields_resample() # (n_modes, 256, 256)
 ```
 
@@ -271,13 +272,13 @@ from fibremodes.utilities.overlaps import overlaps
 ### From GitHub (tagged release)
 
 ```bash
-pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.4.0"
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.5.0"
 ```
 
 Other packages can pin the same dependency in `requirements.txt`:
 
 ```text
-fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.4.0
+fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.5.0
 ```
 
 ### Local development (editable install)

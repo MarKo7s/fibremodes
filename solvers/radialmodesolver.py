@@ -9,6 +9,8 @@ from scipy.integrate import simpson
 from scipy.sparse import diags
 from scipy.sparse.linalg import eigs
 
+from ..utilities.sampling import cartesian_axis
+
 
 @dataclass
 class RadialMode:
@@ -204,14 +206,15 @@ class RadialModeSolver:
         self._modes_ready = True
         return modes
 
-    def calculate_2d_modes(self, N, window_max=None):
+    def calculate_2d_modes(self, N, w_max=None, pixel_pitch=None):
         """Interpolate the stored radial modes onto a square window.
 
-        ``N`` is the sample count on each side. ``window_max`` is the
-        half-width, so the axis runs from ``-window_max`` to ``+window_max``.
-        When ``window_max`` is omitted the half-width is ``r[-1]``. Calling
-        this again with a new ``N`` or ``window_max`` resamples without
-        resolving the eigenvalue problem.
+        ``N`` is the sample count on each side. ``w_max`` is the half-width,
+        so the axis is ``linspace(-w_max, w_max, N)``. When it is omitted the
+        half-width is ``r[-1]``. ``pixel_pitch`` instead uses
+        ``arange(-N // 2, N // 2) * pixel_pitch``, which has a sample at 0.
+        Pass one of ``w_max`` or ``pixel_pitch``. Calling this again with a
+        new grid resamples without resolving the eigenvalue problem.
 
         The origin sample is restored before interpolation: ``R(0) = 0`` for
         odd ``L``, otherwise ``R(0) = R[0]``. Outside the solved radius the
@@ -219,13 +222,7 @@ class RadialModeSolver:
         """
         if not self._modes_ready:
             raise RuntimeError("Call calculate_modes before calculate_2d_modes.")
-        n_points = int(N)
-        if n_points < 2:
-            raise ValueError("N must be at least 2.")
-        window = float(self.r[-1] if window_max is None else window_max)
-        if window <= 0:
-            raise ValueError("window_max must be positive.")
-        axis = np.linspace(-window, window, n_points)
+        axis = cartesian_axis(N, w_max, pixel_pitch, default_half_width=self.r[-1])
         xx, yy = np.meshgrid(axis, axis, indexing="xy")
         rho = np.sqrt(xx**2 + yy**2)
         phi = np.arctan2(yy, xx)
