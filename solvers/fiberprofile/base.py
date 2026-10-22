@@ -33,13 +33,20 @@ class FibreProfile:
     so a later sample count does not re-evaluate the profile equation.
     """
 
-    def __init__(self, r_max, n_samples=_INTERNAL_SAMPLES):
+    def __init__(self, r_max, n_samples=_INTERNAL_SAMPLES, wavelength=None):
         r_max = float(r_max)
         n_samples = int(n_samples)
         if r_max <= 0:
             raise ValueError("r_max must be positive.")
         if n_samples < 2:
             raise ValueError("n_samples must be at least 2.")
+        if wavelength is None:
+            self.wavelength = None
+        else:
+            wavelength = float(wavelength)
+            if wavelength <= 0:
+                raise ValueError("wavelength must be positive.")
+            self.wavelength = wavelength
         self.r_max = r_max
         self.n_radial = n_samples
         self.n_cartesian = n_samples

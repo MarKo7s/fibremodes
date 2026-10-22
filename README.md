@@ -97,7 +97,7 @@ Index profiles live in `fibremodes.solvers.fiberprofile`. Each class evaluates i
 - `index_2d(N=None, window_max=None)` — Cartesian axis and `(N, N)` index. `N` defaults to the Cartesian sample count, or to an explicit `index_1d` count when one was passed.
 - `plot()` — Cartesian map and radial curve.
 
-`StepIndex`, `GradedIndex`, and `DoubleClad` share those methods. Pass `n_clad` or `na`; the cladding index is \(\sqrt{n^2 - \mathrm{NA}^2}\). `r_max` must lie outside the last index step so the outer index is on the stored curve. Omit `n_samples` and pass `wavelength` in metres to size the stored curve from the solver estimate: the radial grid is half of that count, and the Cartesian grid keeps the full count. Pass `n_samples` to choose the count yourself.
+`StepIndex`, `GradedIndex`, and `DoubleClad` share those methods. The constructor wavelength is stored on `profile.wavelength` in metres, or `None` when it was omitted. Pass `n_clad` or `na`; the cladding index is \(\sqrt{n^2 - \mathrm{NA}^2}\). `r_max` must lie outside the last index step so the outer index is on the stored curve. Omit `n_samples` and pass `wavelength` in metres to size the stored curve from the solver estimate: the radial grid is half of that count, and the Cartesian grid keeps the full count. Pass `n_samples` to choose the count yourself.
 
 - `StepIndex(core_radius, r_max, n_core, n_clad=None, na=None, wavelength=None, n_samples=None)` — \(n_\mathrm{core}\) for \(r < a\), cladding outside.
 - `GradedIndex(..., alpha=2, wavelength=None, n_samples=None)` — power-law core. `alpha = 2` is the parabolic profile.
@@ -272,13 +272,13 @@ from fibremodes.utilities.overlaps import overlaps
 ### From GitHub (tagged release)
 
 ```bash
-pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.5.0"
+pip install "fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.6.0"
 ```
 
 Other packages can pin the same dependency in `requirements.txt`:
 
 ```text
-fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.5.0
+fibremodes[gpu] @ git+https://github.com/MarKo7s/fibremodes.git@v1.6.0
 ```
 
 ### Local development (editable install)

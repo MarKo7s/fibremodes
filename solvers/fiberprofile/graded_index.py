@@ -74,7 +74,7 @@ class GradedIndex(FibreProfile):
         n_radial, n_cartesian = resolve_solver_samples(
             wavelength, aperture, r_max, n_samples,
         )
-        super().__init__(r_max)
+        super().__init__(r_max, wavelength=wavelength)
         self.n_radial = n_radial
         self.n_cartesian = n_cartesian
 

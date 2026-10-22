@@ -4,6 +4,12 @@ All notable changes to fibremodes are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.6.0] - 2026-10-22
+
+### Added
+
+- `StepIndex`, `GradedIndex`, and `DoubleClad` store the constructor wavelength on `profile.wavelength`, in metres. It is `None` when the caller omitted it.
+
 ## [1.5.0] - 2026-10-22
 
 ### Added
